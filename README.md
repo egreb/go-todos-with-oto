@@ -19,6 +19,24 @@
    ```
 1. Navigate in your browser to [localhost:8080](http://localhost:8080)
 
+## Generating code
+
+```
+# backend
+oto -template ./templates/server.go.plush \
+    -out ./generated/oto.gen.go \
+    -ignore Ignorer \
+    -pkg generated \
+    ./definitions/definitions.go &&
+gofmt -w ./generated/oto.gen.go ./generated/oto.gen.go
+
+# frontend
+oto -template ./templates/client.js.plush \
+    -out ./frontend/src/oto.gen.js \
+    -ignore Ignorer \
+    ./definitions/definitions.go
+```
+
 ## Dependencies
 
 - [go](https://golang.org)
