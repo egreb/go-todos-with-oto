@@ -45,5 +45,45 @@ export class TodosService {
 		})
 	}
 	
+	async delete(deleteRequest) {
+		const headers = {
+			'Accept':		'application/json',
+			'Accept-Encoding':	'gzip',
+			'Content-Type':		'application/json',
+		}
+		deleteRequest = deleteRequest || {}
+		const response = await fetch('/oto/TodosService.Delete', {
+			method: 'POST',
+			headers: headers,
+			body: JSON.stringify(deleteRequest)
+		})
+		return response.json().then((json) => {
+			if (json.error) {
+				throw new Error(json.error)
+			}
+			return json
+		})
+	}
+	
+	async update(updateRequest) {
+		const headers = {
+			'Accept':		'application/json',
+			'Accept-Encoding':	'gzip',
+			'Content-Type':		'application/json',
+		}
+		updateRequest = updateRequest || {}
+		const response = await fetch('/oto/TodosService.Update', {
+			method: 'POST',
+			headers: headers,
+			body: JSON.stringify(updateRequest)
+		})
+		return response.json().then((json) => {
+			if (json.error) {
+				throw new Error(json.error)
+			}
+			return json
+		})
+	}
+	
 }
 

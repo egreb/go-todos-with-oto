@@ -1,6 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { TodosService } from "./oto.gen.js";
+  import Todo from "./Todo.svelte";
   const todoService = new TodosService();
   let todos = [];
   let error = null;
@@ -30,9 +31,21 @@
         error = err;
       });
   };
+
+  function mark(todo) {
+    remove(todo);
+    todos = todos.concat(todo);
+  }
+
+  function remove(todo) {
+    todos = todos.filter(t => t.id !== todo.id);
+  }
 </script>
 
 <style>
+  header {
+    padding: 1rem 0;
+  }
   main {
     text-align: center;
     padding: 1em;
@@ -53,26 +66,21 @@
     width: 100%;
   }
 
-  li {
-    border: 1px solid #999;
-    box-shadow: 1 1 1 1 #333;
-    width: 100%;
-    border-radius: 5px;
-    margin-top: 5px;
-    list-style: none;
-    padding: 0.5rem;
-    font-size: 1.5rem;
-  }
-
-  li:first-child {
-    margin-top: 0;
-  }
-
-  h1 {
+  h1,
+  h2,
+  h3 {
     color: #ff3e00;
     text-transform: uppercase;
     font-size: 4em;
     font-weight: 100;
+    margin: 0;
+  }
+
+  h2 {
+    font-size: 3em;
+  }
+  h3 {
+    font-size: 2em;
   }
 
   form {
@@ -97,7 +105,9 @@
 </style>
 
 <main>
-  <h1>TODOS!</h1>
+  <header>
+    <h1>TODOS!</h1>
+  </header>
 
   <form on:submit|preventDefault={handleSubmit}>
     <input
@@ -110,8 +120,15 @@
     {/if}
   </form>
   <ul>
-    {#each todos as todo}
-      <li>{todo.task}</li>
+    {#each todos.filter(t => !t.completed) as todo (todo.id)}
+      <Todo {...todo} {mark} {remove} />
+    {/each}
+  </ul>
+
+  <h3>Done!</h3>
+  <ul>
+    {#each todos.filter(t => t.completed) as todo (todo.id)}
+      <Todo {...todo} {mark} {remove} />
     {/each}
   </ul>
 </main>

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -31,6 +32,22 @@ type TodoService struct {
 	*sql.DB
 }
 
+func (ts TodoService) Delete(ctx context.Context, req generated.DeleteRequest) (*generated.DeleteResponse, error) {
+	if err := deleteTodo(ts.DB, req.Todo); err != nil {
+		return &generated.DeleteResponse{OK: false}, err
+	}
+
+	return &generated.DeleteResponse{OK: true}, nil
+}
+
+func (ts TodoService) Update(ctx context.Context, req generated.UpdateRequest) (*generated.UpdateResponse, error) {
+	if err := updateTodo(ts.DB, req.Todo); err != nil {
+		return &generated.UpdateResponse{OK: false}, err
+	}
+
+	return &generated.UpdateResponse{OK: true, Todo: req.Todo}, nil
+}
+
 func (ts TodoService) All(ctx context.Context, _ generated.AllRequest) (*generated.AllResponse, error) {
 	todos, err := getTodos(ts.DB)
 	if err != nil {
@@ -41,28 +58,38 @@ func (ts TodoService) All(ctx context.Context, _ generated.AllRequest) (*generat
 }
 
 func (ts TodoService) Create(ctx context.Context, req generated.CreateRequest) (*generated.CreateResponse, error) {
-	if req.Todo.Task == "" {
+	todo := req.Todo
+	if todo.Task == "" {
 		return &generated.CreateResponse{Error: "No task provided"}, nil
 	}
-	if err := insertTodo(ts.DB, req.Todo); err != nil {
+	todo, err := insertTodo(ts.DB, req.Todo)
+	if err != nil {
 		return &generated.CreateResponse{Error: err.Error()}, nil
 	}
-	return &generated.CreateResponse{Todo: req.Todo}, nil
+	return &generated.CreateResponse{Todo: todo}, nil
 }
 
-func insertTodo(db *sql.DB, todo generated.Todo) error {
+// SQL functions
+func insertTodo(db *sql.DB, todo generated.Todo) (generated.Todo, error) {
 	log.Println("Inserting todo record ...")
+
 	query := `INSERT INTO todos(task, completed) VALUES (?, ?)`
 	statement, err := db.Prepare(query) // Prepare statement.
 	if err != nil {
-		return err
+		return todo, err
 	}
+	defer statement.Close()
 
-	_, err = statement.Exec(todo.Task, todo.Completed)
+	res, err := statement.Exec(todo.Task, todo.Completed)
 	if err != nil {
-		return err
+		return todo, err
 	}
-	return nil
+	id, err := res.LastInsertId()
+	if err != nil {
+		return todo, err
+	}
+	todo.ID = int(id)
+	return todo, nil
 }
 
 func getTodos(db *sql.DB) ([]generated.Todo, error) {
@@ -82,6 +109,40 @@ func getTodos(db *sql.DB) ([]generated.Todo, error) {
 		todos = append(todos, t)
 	}
 	return todos, nil
+}
+
+func updateTodo(db *sql.DB, todo generated.Todo) error {
+	log.Println("Update todo record ...")
+
+	query := fmt.Sprintf(`UPDATE todos SET task = '%s', completed = %v WHERE id=%d`, todo.Task, todo.Completed, todo.ID)
+	statement, err := db.Prepare(query) // Prepare statement.
+	if err != nil {
+		return err
+	}
+	defer statement.Close()
+
+	_, err = statement.Exec()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func deleteTodo(db *sql.DB, todo generated.Todo) error {
+	log.Println("Deleting todo record..")
+
+	query := fmt.Sprintf("DELETE FROM todos WHERE id=%d", todo.ID)
+	stmt, err := db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // create the todo table
